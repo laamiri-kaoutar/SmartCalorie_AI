@@ -12,11 +12,32 @@ from sklearn.preprocessing import StandardScaler
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("JWT_SECRET", "pytest-jwt-secret")
 
+import models.ingredient
+import models.plan
+import models.user
+import models.workout
+from db.session import Base, engine
+
+Base.metadata.create_all(bind=engine)
+
 from fastapi.testclient import TestClient
 
 from main import app
 
 joblib_dummy_model = MagicMock()
+
+
+@pytest.fixture(scope="session")
+def engine():
+    from db.session import engine as sqlalchemy_engine
+
+    return sqlalchemy_engine
+
+
+@pytest.fixture(scope="session", autouse=True)
+def create_tables(engine):
+    Base.metadata.create_all(bind=engine)
+    yield
 
 
 @pytest.fixture(autouse=True)
