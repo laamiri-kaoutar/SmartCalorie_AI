@@ -1,5 +1,6 @@
 import json
 import os
+from contextlib import nullcontext
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,13 @@ from sklearn.preprocessing import StandardScaler
 from main import app
 from models.user import User
 from services import ml_utils
+
+
+@pytest.fixture(autouse=True)
+def silence_mlflow_globally(mocker):
+    mocker.patch("mlflow.set_tracking_uri", return_value=None)
+    mocker.patch("mlflow.set_experiment", return_value=None)
+    mocker.patch("mlflow.start_run", lambda **kwargs: nullcontext())
 
 
 @pytest.fixture

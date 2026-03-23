@@ -46,8 +46,8 @@ def mlflow_nullcontext(*args, **kwargs):
     return nullcontext()
 
 
-def test_ml_prediction_flow(mocker, mock_user):
-    mocker.patch("services.prediction_service.mlflow.start_run", mlflow_nullcontext)
+def test_ml_prediction_flow(mocker, mock_user, metadata_dict):
+    mocker.patch("services.ml_utils._load_metadata", return_value=metadata_dict)
     mock_db = MagicMock()
     mocker.patch("services.prediction_service.SessionLocal", return_value=mock_db)
     mocker.patch("services.prediction_service.Repository", return_value=MagicMock())

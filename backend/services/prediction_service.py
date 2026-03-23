@@ -1,9 +1,8 @@
 """
 Singleton prediction service: loads best_model.pkl once and predicts workout calories.
-Paths point to /app/artifacts/ for Docker.
+Artifacts path is resolved with ml_utils.ARTIFACTS_DIR (repo or backend mount).
 """
 from contextlib import nullcontext
-from pathlib import Path
 import time
 from typing import List
 
@@ -20,8 +19,7 @@ from services import ml_utils
 from services.repository import Repository
 from models.workout import WorkoutExercise
 
-ARTIFACTS_DIR = Path("/app/artifacts")
-MODEL_PATH = ARTIFACTS_DIR / "best_model.pkl"
+MODEL_PATH = ml_utils.ARTIFACTS_DIR / "best_model.pkl"
 
 
 class PredictionService:
