@@ -1,0 +1,42 @@
+{
+  "numeric_cols": [
+    "age",
+    "weight_kg",
+    "duration_minutes",
+    "avg_heart_rate"
+  ],
+  "all_feature_cols": [
+    "age",
+    "sex",
+    "height_cm",
+    "weight_kg",
+    "duration_minutes",
+    "intensity_level",
+    "avg_heart_rate",
+    "exercise_type_HIIT workout",
+    "exercise_type_brisk walking",
+    "exercise_type_cycling",
+    "exercise_type_jogging",
+    "exercise_type_jump rope",
+    "exercise_type_lunges",
+    "exercise_type_pilates",
+    "exercise_type_pull-ups",
+    "exercise_type_push-ups",
+    "exercise_type_running",
+    "exercise_type_squats",
+    "exercise_type_stair climbing",
+    "exercise_type_strength training",
+    "exercise_type_swimming",
+    "exercise_type_walking",
+    "exercise_type_yoga"
+  ],
+  "sex_map": {
+    "M": 0,
+    "F": 1
+  },
+  "intensity_map": {
+    "low": 1,
+    "moderate": 2,
+    "high": 3
+  }
+}
