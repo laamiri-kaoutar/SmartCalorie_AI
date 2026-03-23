@@ -1,5 +1,6 @@
 import json
 import os
+import tempfile
 from contextlib import nullcontext
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -9,7 +10,9 @@ import numpy as np
 import pytest
 from sklearn.preprocessing import StandardScaler
 
-os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
+_fd, _TEST_DB_PATH = tempfile.mkstemp(prefix="smartcalorie_", suffix=".sqlite3")
+os.close(_fd)
+os.environ["DATABASE_URL"] = f"sqlite:///{Path(_TEST_DB_PATH).resolve().as_posix()}"
 os.environ.setdefault("JWT_SECRET", "pytest-jwt-secret")
 
 import models.ingredient
@@ -25,19 +28,6 @@ from fastapi.testclient import TestClient
 from main import app
 
 joblib_dummy_model = MagicMock()
-
-
-@pytest.fixture(scope="session")
-def engine():
-    from db.session import engine as sqlalchemy_engine
-
-    return sqlalchemy_engine
-
-
-@pytest.fixture(scope="session", autouse=True)
-def create_tables(engine):
-    Base.metadata.create_all(bind=engine)
-    yield
 
 
 @pytest.fixture(autouse=True)
