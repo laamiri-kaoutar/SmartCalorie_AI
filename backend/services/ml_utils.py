@@ -6,8 +6,6 @@ import json
 import joblib
 import pandas as pd
 
-# Monorepo checkout: .../repo/backend/services/this_file.py -> repo root is three levels up.
-# Docker (backend copied to /app): artifacts are mounted at backend root /app/artifacts.
 _BASE_DIR = Path(__file__).resolve().parent.parent.parent
 _BACKEND_DIR = Path(__file__).resolve().parent.parent
 _REPO_ARTIFACTS = _BASE_DIR / "artifacts"
@@ -33,17 +31,7 @@ def _load_scaler():
 
 
 def prepare_features_for_prediction(records: List[Dict[str, Any]]) -> pd.DataFrame:
-    """
-    Turn a list of raw records into a feature DataFrame ready for model.predict().
-
-    Steps:
-    - Load preprocessing_metadata.json and standard_scaler.pkl from ARTIFACTS_DIR
-    - Apply `sex_map` and `intensity_map` from metadata
-    - One-hot encode `exercise_type` with pd.get_dummies
-    - Reindex to `all_feature_cols` (from metadata) with fill_value=0 so the
-      column order and set exactly match training
-    - ScIale only the columns listed in `numeric_cols`
-    """
+  
     if not records:
         raise ValueError("No records provided for prediction.")
 
@@ -56,8 +44,6 @@ def prepare_features_for_prediction(records: List[Dict[str, Any]]) -> pd.DataFra
     numeric_cols: List[str] = metadata["numeric_cols"]
 
     df = pd.DataFrame(records)
-
-    # Map sex / gender to numeric codes
     if "sex" not in df.columns:
         if "gender" in df.columns:
             df["sex"] = df["gender"].map(sex_map)

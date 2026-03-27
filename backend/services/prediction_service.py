@@ -37,12 +37,11 @@ class PredictionService:
         # Configure MLflow tracking (service name inside Docker)
         mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI or "http://mlflow:5000")
 
-        # FALLBACK: self._model = joblib.load(MODEL_PATH)
         try:
             self._model = mlflow.pyfunc.load_model("models:/CaloriePredictor/Production")
-            print("DEBUG: Model loaded from MLflow Registry (Production)")
+            print("INFO: PredictionService - Model loaded from MLflow registry (production)")
         except Exception as e:
-            print(f"WARNING: MLflow load failed, using local fallback. Error: {e}")
+            print(f"WARNING: PredictionService - MLflow load failed, using local artifact fallback. Error: {e}")
             self._model = joblib.load(MODEL_PATH)
 
     def predict_workout_calories(
