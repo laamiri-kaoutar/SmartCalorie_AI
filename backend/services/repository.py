@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import json
-from datetime import date
+from datetime import date, datetime, timedelta
 from typing import Any, Optional
 
-from sqlalchemy import func
+from sqlalchemy import func, inspect, text
 from sqlalchemy.orm import Session
 
 from models.ingredient import Ingredient
@@ -200,6 +200,78 @@ class Repository:
             "total_workouts": total_workouts,
             "total_plans": total_plans,
         }
+
+    def get_daily_activity_stats(self, db: Session) -> list[dict[str, int | str]]:
+        today = datetime.utcnow().date()
+        start = today - timedelta(days=6)
+
+        workout_rows = (
+            db.query(
+                func.date(Workout.created_at).label("day"),
+                func.count(Workout.id).label("count"),
+            )
+            .filter(func.date(Workout.created_at) >= start)
+            .group_by(func.date(Workout.created_at))
+            .all()
+        )
+        plan_rows = (
+            db.query(
+                DailyPlan.date.label("day"),
+                func.count(DailyPlan.id).label("count"),
+            )
+            .filter(DailyPlan.date >= start)
+            .group_by(DailyPlan.date)
+            .all()
+        )
+
+        workout_by_day = {str(r.day): int(r.count or 0) for r in workout_rows}
+        plan_by_day = {str(r.day): int(r.count or 0) for r in plan_rows}
+
+        out: list[dict[str, int | str]] = []
+        for i in range(7):
+            day = start + timedelta(days=i)
+            key = str(day)
+            out.append(
+                {
+                    "date": key,
+                    "workouts_count": workout_by_day.get(key, 0),
+                    "plans_count": plan_by_day.get(key, 0),
+                }
+            )
+        return out
+
+    def get_cuisine_distribution(self, db: Session) -> list[dict[str, int | str]]:
+        # Keep this safe for existing databases that do not yet have a cuisine column.
+        columns = {c["name"] for c in inspect(db.bind).get_columns("daily_plans")}
+        if "cuisine" not in columns:
+            return []
+        result = db.execute(
+            text(
+                """
+                SELECT cuisine AS name, COUNT(*) AS value
+                FROM daily_plans
+                WHERE cuisine IS NOT NULL AND TRIM(cuisine) <> ''
+                GROUP BY cuisine
+                ORDER BY value DESC
+                """
+            )
+        )
+        return [
+            {"name": str(row.name), "value": int(row.value or 0)}
+            for row in result
+            if str(row.name).strip()
+        ]
+
+    def get_user_demographics(self, db: Session) -> list[dict[str, int | str]]:
+        rows = (
+            db.query(
+                func.coalesce(User.gender, "Unknown").label("gender"),
+                func.count(User.id).label("count"),
+            )
+            .group_by(func.coalesce(User.gender, "Unknown"))
+            .all()
+        )
+        return [{"gender": str(r.gender), "count": int(r.count or 0)} for r in rows]
 
     def search_ingredients(self, db: Session, query: str) -> list[Ingredient]:
         q = (query or "").strip()

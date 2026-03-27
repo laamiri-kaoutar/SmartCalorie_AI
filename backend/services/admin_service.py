@@ -22,6 +22,13 @@ class AdminService:
     def get_stats(self) -> dict[str, int]:
         return self.repository.get_system_stats(self.db)
 
+    def get_analytics(self) -> dict[str, list[dict[str, int | str]]]:
+        return {
+            "activity": self.repository.get_daily_activity_stats(self.db),
+            "cuisines": self.repository.get_cuisine_distribution(self.db),
+            "demographics": self.repository.get_user_demographics(self.db),
+        }
+
     def search_ingredients(self, query: str) -> list[Ingredient]:
         return self.repository.search_ingredients(self.db, query)
 
