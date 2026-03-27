@@ -16,14 +16,6 @@ from scripts.usda_harvester import (
 
 
 class PortionService:
-    """
-    Resolve ingredients (DB first, then USDA) and scale portions to hit a calorie target.
-
-    Rules:
-    - Vegetables: keep at suggested_g or midpoint of range.
-    - Protein: fix at midpoint of range.
-    - Remaining calories go to carbs and fats, scaled within their ranges.
-    """
 
     def __init__(self, db: Session) -> None:
         self.db = db
@@ -32,11 +24,7 @@ class PortionService:
         return simplify_name(name or "").lower()
 
     def resolve_ingredient(self, name: str) -> Optional[Ingredient]:
-        """
-        Resolve an ingredient name:
-        1. Case-insensitive fuzzy match on simplified_name in PostgreSQL.
-        2. If not found, query USDA API and persist a new Ingredient.
-        """
+       
         if not name:
             return None
 

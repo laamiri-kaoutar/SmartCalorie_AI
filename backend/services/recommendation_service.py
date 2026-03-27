@@ -34,28 +34,20 @@ from services.repository import Repository
 
 
 class RecommendationService:
-    """
-    High-level recommendation engine:
-    - Computes TDEE and daily targets.
-    - Calls Gemini to get meal blueprints.
-    - Uses PortionService to resolve ingredients and scale portions.
-    """
 
     def __init__(self) -> None:
-        print(f"DEBUG: Initializing Gemini with model: {settings.GEMINI_MODEL}")
-        genai.configure(api_key="AIzaSyBO0IQHbeC1pYeIZ62iIbQZmfj2nJaFbNo")
-        # self.model_name = settings.GEMINI_MODEL
-        self.model_name = "gemini-flash-latest"
+        print(f" RecommendationService - Initializing Gemini with model {settings.GEMINI_MODEL}")
+        genai.configure(api_key=settings.GOOGLE_API_KEY)
+        self.model_name = settings.GEMINI_MODEL
         self.model = genai.GenerativeModel(self.model_name)
         try:
             mlflow.set_tracking_uri("http://mlflow:5000")
             mlflow.set_experiment("SmartCalorie_AI_Recommendations")
         except Exception as e:
-            print(f"DEBUG: MLflow Rec Tracking Error: {e}")
+            print(f"WARNING: RecommendationService - MLflow tracking unavailable. Error: {e}")
 
     def calculate_tdee(self, user: User) -> float:
-        """Mifflin-St Jeor TDEE via NutritionService."""
-        # NutritionService already encapsulates the correct formula and activity factor.
+        
         return NutritionService.calculate_tdee(user)
 
     def get_weighted_targets(
@@ -67,10 +59,7 @@ class RecommendationService:
         meal_weight: float = 1.0,
         snack_weight: float = 0.5,
     ) -> tuple[float, List[float]]:
-        """
-        Total = TDEE + workout_burn.
-        Split across meals/snacks using weights (1.0 for meals, 0.5 for snacks).
-        """
+       
         tdee = self.calculate_tdee(user)
         total = tdee + float(predicted_burn)
         targets = NutritionService.split_calories_to_slots(
@@ -121,6 +110,7 @@ class RecommendationService:
         target_calories: float,
         preferences_text: str,
         allergies: List[str],
+        generated_meals: List[str] | None = None,
         failed_ingredients: List[str] | None = None,
     ) -> MealBlueprint:
         system_prompt = self.build_system_prompt(allergies)
@@ -130,6 +120,11 @@ class RecommendationService:
             f"Preferences: {preferences_text}.",
             "Use simple ingredient names that are likely to exist in a USDA-style nutrition database.",
         ]
+        if generated_meals:
+            user_lines.append(
+                "Ensure variety. Do not repeat ingredients or styles from these previously generated meals: "
+                f"{generated_meals}."
+            )
         if failed_ingredients:
             failed_str = ", ".join(sorted(set(failed_ingredients)))
             user_lines.append(
@@ -140,14 +135,14 @@ class RecommendationService:
         response = self.model.generate_content([system_prompt, "\n".join(user_lines)])
         text = ""
         try:
-            text = response.text  # type: ignore[attr-defined]
+            text = response.text  
         except Exception:
             try:
                 if response.candidates:
                     candidate = response.candidates[0]
                     if candidate.content and candidate.content.parts:
                         text = "".join(p.text or "" for p in candidate.content.parts)
-            except Exception as exc:  # pragma: no cover
+            except Exception as exc:  
                 raise HTTPException(status_code=502, detail=f"Gemini response error: {exc}") from exc
 
         try:
@@ -185,7 +180,7 @@ class RecommendationService:
             mlflow_ctx = mlflow.start_run(run_name="Meal_Plan_Generation")
             mlflow_enabled = True
         except Exception as e:
-            print(f"DEBUG: MLflow Rec Tracking Error: {e}")
+            print(f"WARNING: RecommendationService - MLflow tracking unavailable. Error: {e}")
             mlflow_enabled = False
 
         if body.meals_per_day <= 0 and body.snacks_per_day <= 0:
@@ -212,7 +207,7 @@ class RecommendationService:
                     mlflow.log_param("model_name", self.model_name)
                     mlflow.set_tag("cuisine", cuisine or "unknown")
                 except Exception as e:
-                    print(f"DEBUG: MLflow Rec Tracking Error: {e}")
+                    print(f"WARNING: RecommendationService - MLflow logging skipped. Error: {e}")
 
             total_target, slot_targets = self.get_weighted_targets(
                 user=user,
@@ -232,6 +227,7 @@ class RecommendationService:
 
             portion_service = PortionService(db)
             slots: List[SlotPlan] = []
+            generated_meals: List[str] = []
 
             def slot_name(index: int) -> str:
                 if index < body.meals_per_day:
@@ -252,6 +248,7 @@ class RecommendationService:
                         target_calories=target_calories,
                         preferences_text=preferences_text,
                         allergies=allergies,
+                        generated_meals=generated_meals,
                         failed_ingredients=failed or None,
                     )
 
@@ -279,6 +276,7 @@ class RecommendationService:
                     blueprint=blueprint,
                     target_calories=target_calories,
                 )
+                generated_meals.append(final_meal.meal_name)
 
                 slots.append(
                     SlotPlan(
@@ -311,7 +309,7 @@ class RecommendationService:
                     mlflow.log_metric("final_calculated_total_calories", float(response.total_target_calories))
                     mlflow.log_dict(final_response.model_dump(), "meal_plan.json")
                 except Exception as e:
-                    print(f"DEBUG: MLflow Rec Tracking Error: {e}")
+                    print(f"WARNING: RecommendationService - MLflow logging skipped. Error: {e}")
 
             try:
                 AI_RECOMMENDATION_LATENCY.observe(float(time.time() - start_time))
