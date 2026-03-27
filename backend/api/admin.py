@@ -42,6 +42,14 @@ def stats(
     return admin_service.get_stats()
 
 
+@router.get("/analytics")
+def analytics(
+    admin: User = Depends(get_current_admin),
+    admin_service: AdminService = Depends(get_admin_service),
+):
+    return admin_service.get_analytics()
+
+
 @router.get("/ingredients")
 def search_ingredients(
     q: str = Query("", min_length=1),
