@@ -1,9 +1,4 @@
-"""
-Harvest ingredients from USDA FoodData Central API into the ingredients table.
-Uses USDA_API_KEY from env, .env file, or settings. Run from project root:
-  python -m backend.scripts.usda_harvester
-Or in Docker: docker-compose exec backend python scripts/usda_harvester.py
-"""
+
 import re
 import sys
 import time
