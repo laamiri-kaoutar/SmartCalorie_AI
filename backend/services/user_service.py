@@ -14,15 +14,9 @@ class UserService:
         self.db = db
         self.repository = Repository()
 
-    # ------------------------
-    # Helpers
-    # ------------------------
     def _get_user_by_email(self, email: str) -> Optional[User]:
         return self.db.query(User).filter(User.email == email).first()
 
-    # ------------------------
-    # Public API
-    # ------------------------
     def create_user(self, user_in: UserCreate) -> UserOut:
         existing = self._get_user_by_email(user_in.email)
         if existing:
